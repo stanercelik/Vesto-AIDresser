@@ -41,7 +41,5 @@ enum StylePreferencesTestDataFactory {
         )
     }
     
-    static func createMockAuthenticationService() -> MockAuthenticationService {
-        return MockAuthenticationService()
-    }
+    
 }
