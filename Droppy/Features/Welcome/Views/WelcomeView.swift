@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct WelcomeView: View {
-    @StateObject private var viewModel = WelcomeViewModel()
+    @StateObject private var viewModel: WelcomeViewModel
     @EnvironmentObject private var authManager: AuthenticationManager
+    
+    init(authService: AuthenticationServiceProtocol = SupabaseAuthenticationService()) {
+        _viewModel = StateObject(wrappedValue: WelcomeViewModel(authService: authService))
+    }
     
     var body: some View {
         NavigationView {
@@ -91,7 +95,7 @@ struct FeatureRow: View {
     }
 }
 
-#Preview {
-    WelcomeView()
-        .environmentObject(AuthenticationManager())
-}
+//#Preview {
+//    WelcomeView(authService: MockAuthenticationService())
+//        .environmentObject(AuthenticationManager())
+//}

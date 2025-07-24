@@ -54,16 +54,25 @@ final class SupabaseAuthenticationService: AuthenticationServiceProtocol {
     }
     
     func getCurrentUser() async -> User? {
-        guard let sessionUser = try? await client.auth.session.user else {
+        do {
+            // Try to get the current session
+            let session = try await client.auth.session
+            
+            // Validate that the session is not expired
+            if session.expiresAt < Date().timeIntervalSince1970 {
+                return nil
+            }
+            
+            let profile = try? await getProfile(userId: session.user.id)
+            return User(
+                id: session.user.id,
+                email: session.user.email ?? "",
+                isOnboardingCompleted: profile?.isOnboardingCompleted ?? false
+            )
+        } catch {
+            // If we can't get the session or it's invalid, return nil
             return nil
         }
-        
-        let profile = try? await getProfile(userId: sessionUser.id)
-        return User(
-            id: sessionUser.id,
-            email: sessionUser.email ?? "",
-            isOnboardingCompleted: profile?.isOnboardingCompleted ?? false
-        )
     }
     
     func getAccessToken() async throws -> String? {
@@ -145,7 +154,7 @@ final class SupabaseAuthenticationService: AuthenticationServiceProtocol {
             eventType: eventType,
             success: success,
             errorMessage: errorMessage,
-            ipAddress: "unknown", // Placeholder
+            ipAddress: nil, // Use nil instead of "unknown" for inet type
             userAgent: "Droppy iOS App"
         )
         
@@ -189,7 +198,7 @@ final class SupabaseAuthenticationService: AuthenticationServiceProtocol {
         let eventType: String
         let success: Bool
         let errorMessage: String?
-        let ipAddress: String
+        let ipAddress: String?
         let userAgent: String
         
         enum CodingKeys: String, CodingKey {
