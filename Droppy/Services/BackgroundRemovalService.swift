@@ -78,7 +78,7 @@ final class ReplicateBackgroundRemovalService: BackgroundRemovalServiceProtocol 
         var request = URLRequest(url: pollURL)
         request.addValue("Token \(apiToken)", forHTTPHeaderField: "Authorization")
         
-        for _ in 0..<30 { // Poll for up to 5 minutes (30 * 10 seconds)
+        for attempt in 0..<60 { // Poll for up to 2 minutes (60 * 2 seconds)
             do {
                 let (data, _) = try await URLSession.shared.data(for: request)
                 
@@ -103,8 +103,9 @@ final class ReplicateBackgroundRemovalService: BackgroundRemovalServiceProtocol 
                     throw APIError.processingFailed(error)
                     
                 case "starting", "processing":
-                    // Continue polling
-                    try await Task.sleep(nanoseconds: 10_000_000_000) // 10 second delay
+                    // Adaptive polling: faster at start, slower later
+                    let delay = attempt < 10 ? 1_000_000_000 : 2_000_000_000 // 2s then 3s
+                    try await Task.sleep(nanoseconds: UInt64(delay))
                     continue
                     
                 default:
