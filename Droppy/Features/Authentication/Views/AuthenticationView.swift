@@ -2,13 +2,13 @@ import SwiftUI
 
 struct AuthenticationView: View {
     @StateObject private var viewModel: AuthenticationViewModel
-    private let authService: AuthenticationServiceProtocol
+    private let authManager: AuthenticationManager
     private let onAuthenticationComplete: () -> Void
     @Environment(\.dismiss) private var dismiss
     
-    init(authService: AuthenticationServiceProtocol, onAuthenticationComplete: @escaping () -> Void = {}) {
-        self.authService = authService
-        self._viewModel = StateObject(wrappedValue: AuthenticationViewModel(authService: authService))
+    init(authManager: AuthenticationManager, onAuthenticationComplete: @escaping () -> Void = {}) {
+        self.authManager = authManager
+        self._viewModel = StateObject(wrappedValue: AuthenticationViewModel(authManager: authManager))
         self.onAuthenticationComplete = onAuthenticationComplete
     }
     
@@ -47,18 +47,6 @@ struct AuthenticationView: View {
             if isAuthenticated {
                 onAuthenticationComplete()
                 dismiss()
-            }
-        }
-        .fullScreenCover(isPresented: .constant(viewModel.shouldShowOnboarding)) {
-            if let user = viewModel.currentUser {
-                StylePreferencesView(
-                    authService: authService,
-                    userId: user.id
-                ) {
-                    Task {
-                        await viewModel.completeOnboarding()
-                    }
-                }
             }
         }
     }
@@ -201,5 +189,5 @@ struct AuthenticationView: View {
 }
 
 #Preview {
-    AuthenticationView(authService: SupabaseAuthenticationService())
+    AuthenticationView(authManager: AuthenticationManager())
 }

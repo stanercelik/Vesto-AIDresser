@@ -9,7 +9,7 @@ final class AuthenticationViewModel: ObservableObject {
     @Published private(set) var currentUser: User?
     @Published private(set) var authenticationMode: AuthenticationMode = .signIn
     
-    private let authService: AuthenticationServiceProtocol
+    private let authManager: AuthenticationManager
     
     private enum L10n {
         static let signInTitle = "Giriş Yap"
@@ -31,9 +31,9 @@ final class AuthenticationViewModel: ObservableObject {
         static let preferencesError = "Stil tercihleri kaydedilirken hata oluştu"
     }
     
-    init(authService: AuthenticationServiceProtocol) {
-        self.authService = authService
-        self.currentUser = authService.getCurrentUser()
+    init(authManager: AuthenticationManager) {
+        self.authManager = authManager
+        self.currentUser = authManager.currentUser
     }
     
     var isAuthenticated: Bool {
@@ -76,7 +76,8 @@ final class AuthenticationViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            currentUser = try await authService.signIn(email: email, password: password)
+            try await authManager.signIn(email: email, password: password)
+            currentUser = authManager.currentUser
         } catch let error as AuthenticationError {
             errorMessage = error.localizedDescription
         } catch {
@@ -93,7 +94,8 @@ final class AuthenticationViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            currentUser = try await authService.signUp(email: email, password: password)
+            try await authManager.signUp(email: email, password: password)
+            currentUser = authManager.currentUser
         } catch let error as AuthenticationError {
             errorMessage = error.localizedDescription
         } catch {
@@ -104,33 +106,25 @@ final class AuthenticationViewModel: ObservableObject {
     }
     
     func signOut() async {
-        do {
-            try await authService.signOut()
-            currentUser = nil
-            email = ""
-            password = ""
-            errorMessage = nil
-        } catch {
-            errorMessage = L10n.signOutError
-        }
+        await authManager.signOut()
+        currentUser = nil
+        email = ""
+        password = ""
+        errorMessage = nil
     }
     
     func completeOnboarding() async {
-        guard let user = currentUser else { return }
-        
         do {
-            try await authService.completeOnboarding(for: user.id)
-            currentUser = User(id: user.id, email: user.email, isOnboardingCompleted: true)
+            try await authManager.completeOnboarding()
+            currentUser = authManager.currentUser
         } catch {
             errorMessage = L10n.onboardingError
         }
     }
     
     func saveStylePreferences(_ preferences: StylePreferences) async {
-        guard let user = currentUser else { return }
-        
         do {
-            try await authService.saveStylePreferences(preferences, for: user.id)
+            try await authManager.saveStylePreferences(preferences)
         } catch {
             errorMessage = L10n.preferencesError
         }

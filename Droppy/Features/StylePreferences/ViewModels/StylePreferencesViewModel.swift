@@ -2,11 +2,10 @@ import Foundation
 
 @MainActor
 final class StylePreferencesViewModel: ObservableObject {
-    @Published internal(set) var state = StylePreferencesState()
+    @Published var state = StylePreferencesState()
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     
-    private let authService: AuthenticationServiceProtocol
     private let userId: UUID
     
     private enum L10n {
@@ -17,8 +16,7 @@ final class StylePreferencesViewModel: ObservableObject {
         static let savingError = "Tercihler kaydedilirken hata oluştu"
     }
     
-    init(authService: AuthenticationServiceProtocol, userId: UUID) {
-        self.authService = authService
+    init(userId: UUID) {
         self.userId = userId
     }
     
@@ -55,7 +53,7 @@ final class StylePreferencesViewModel: ObservableObject {
         }
     }
     
-    func savePreferencesAndComplete() async -> Bool {
+    func savePreferencesAndComplete(authManager: AuthenticationManager) async -> Bool {
         guard state.isLastStep && state.hasMinimumSelections else { return false }
         
         isLoading = true
@@ -64,8 +62,8 @@ final class StylePreferencesViewModel: ObservableObject {
         let preferences = state.toStylePreferences()
         
         do {
-            try await authService.saveStylePreferences(preferences, for: userId)
-            try await authService.completeOnboarding(for: userId)
+            try await authManager.saveStylePreferences(preferences)
+            try await authManager.completeOnboarding()
             isLoading = false
             return true
         } catch {

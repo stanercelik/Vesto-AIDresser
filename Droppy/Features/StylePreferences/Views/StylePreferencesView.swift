@@ -2,12 +2,12 @@ import SwiftUI
 
 struct StylePreferencesView: View {
     @StateObject private var viewModel: StylePreferencesViewModel
-    private let onComplete: () -> Void
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authManager: AuthenticationManager
+    let user: User
     
-    init(authService: AuthenticationServiceProtocol, userId: UUID, onComplete: @escaping () -> Void = {}) {
-        self._viewModel = StateObject(wrappedValue: StylePreferencesViewModel(authService: authService, userId: userId))
-        self.onComplete = onComplete
+    init(user: User) {
+        self.user = user
+        self._viewModel = StateObject(wrappedValue: StylePreferencesViewModel(userId: user.id))
     }
     
     var body: some View {
@@ -120,11 +120,9 @@ struct StylePreferencesView: View {
             ) {
                 Task {
                     if viewModel.state.isLastStep {
-                        let success = await viewModel.savePreferencesAndComplete()
+                        let success = await viewModel.savePreferencesAndComplete(authManager: authManager)
                         if success {
                             HapticFeedback.notification(.success)
-                            onComplete()
-                            dismiss()
                         }
                     } else {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -182,5 +180,6 @@ struct SelectionChip: View {
 }
 
 #Preview {
-    StylePreferencesView(authService: SupabaseAuthenticationService(), userId: UUID())
+    StylePreferencesView(user: User(id: UUID(), email: "test@example.com", isOnboardingCompleted: false))
+        .environmentObject(AuthenticationManager())
 }

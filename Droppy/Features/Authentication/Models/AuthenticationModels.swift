@@ -19,6 +19,7 @@ enum AuthenticationError: Error, Equatable {
     case emailAlreadyExists
     case networkError
     case unknownError
+    case notAuthenticated
     
     var localizedDescription: String {
         switch self {
@@ -34,6 +35,8 @@ enum AuthenticationError: Error, Equatable {
             return "Bağlantı hatası. Lütfen tekrar deneyin."
         case .unknownError:
             return "Beklenmeyen bir hata oluştu"
+        case .notAuthenticated:
+            return "Kullanıcı oturumu bulunamadı veya geçersiz."
         }
     }
 }

@@ -2,11 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @StateObject private var viewModel = WelcomeViewModel()
-    private let authService: AuthenticationServiceProtocol
-    
-    init(authService: AuthenticationServiceProtocol) {
-        self.authService = authService
-    }
+    @EnvironmentObject private var authManager: AuthenticationManager
     
     var body: some View {
         NavigationView {
@@ -27,7 +23,7 @@ struct WelcomeView: View {
             }
         }
         .sheet(isPresented: $viewModel.shouldShowAuthentication) {
-            AuthenticationView(authService: authService) {
+            AuthenticationView(authManager: authManager) {
                 viewModel.dismissAuthentication()
             }
         }
@@ -96,5 +92,6 @@ struct FeatureRow: View {
 }
 
 #Preview {
-    WelcomeView(authService: SupabaseAuthenticationService())
+    WelcomeView()
+        .environmentObject(AuthenticationManager())
 }
