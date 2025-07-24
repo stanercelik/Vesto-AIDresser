@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		20A988BB2E329D2D00C2B44D /* Keys.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		20A988362E32819900C2B44D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		20A988232E32819700C2B44D /* Droppy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Droppy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		20A988352E32819900C2B44D /* DroppyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DroppyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		20A9883F2E32819900C2B44D /* DroppyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DroppyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		20A988BA2E329D2600C2B44D /* Keys.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Keys.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		20A9881A2E32819700C2B44D = {
 			isa = PBXGroup;
 			children = (
+				20A988BA2E329D2600C2B44D /* Keys.xcconfig */,
 				20A988252E32819700C2B44D /* Droppy */,
 				20A988382E32819900C2B44D /* DroppyTests */,
 				20A988422E32819900C2B44D /* DroppyUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				20A988BB2E329D2D00C2B44D /* Keys.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,6 +278,7 @@
 /* Begin XCBuildConfiguration section */
 		20A988472E32819900C2B44D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -334,6 +342,7 @@
 		};
 		20A988482E32819900C2B44D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -390,6 +399,7 @@
 		};
 		20A9884A2E32819900C2B44D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -409,6 +419,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				NEW_SETTING = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tanercelik.polynap.Droppy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -419,6 +430,7 @@
 		};
 		20A9884B2E32819900C2B44D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -438,6 +450,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				NEW_SETTING = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tanercelik.polynap.Droppy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -448,6 +461,7 @@
 		};
 		20A9884D2E32819900C2B44D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -467,6 +481,7 @@
 		};
 		20A9884E2E32819900C2B44D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -486,6 +501,7 @@
 		};
 		20A988502E32819900C2B44D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -503,6 +519,7 @@
 		};
 		20A988512E32819900C2B44D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20A988BA2E329D2600C2B44D /* Keys.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

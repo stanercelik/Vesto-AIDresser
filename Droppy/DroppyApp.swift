@@ -6,27 +6,26 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct DroppyApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
+    private let authService: AuthenticationServiceProtocol = SupabaseAuthenticationService()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppRootView(authService: authService)
         }
-        .modelContainer(sharedModelContainer)
+    }
+}
+
+struct AppRootView: View {
+    private let authService: AuthenticationServiceProtocol
+    
+    init(authService: AuthenticationServiceProtocol) {
+        self.authService = authService
+    }
+    
+    var body: some View {
+        WelcomeView(authService: authService)
     }
 }

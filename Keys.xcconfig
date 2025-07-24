@@ -1,0 +1,9 @@
+//
+//  Keys.xcconfig
+//  Droppy
+//
+//  Created by Taner Çelik on 24.07.2025.
+//
+
+SUPABASE_URL = https:/$()/knbnmcrkyjcbihqdabld.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuYm5tY3JreWpjYmlocWRhYmxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNzE2MjAsImV4cCI6MjA2ODk0NzYyMH0.9UJrqHRiiGOZTngUG3CyIXvenSwXySzx4IFkcVWrom4
