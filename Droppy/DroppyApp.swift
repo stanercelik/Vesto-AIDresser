@@ -64,10 +64,12 @@ struct MainAppView: View {
     
     var body: some View {
         TabView {
-            WardrobeView(
-                client: SupabaseConfig.shared.client,
-                userId: user.id
-            )
+            NavigationView {
+                WardrobeView(
+                    client: SupabaseConfig.shared.client,
+                    userId: user.id
+                )
+            }
             .tabItem {
                 Image(systemName: "tshirt.fill")
                 Text("Dolabım")

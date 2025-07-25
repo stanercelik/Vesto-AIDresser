@@ -220,17 +220,59 @@ enum WeatherSuitability: String, CaseIterable, Codable {
 enum UploadState {
     case idle
     case selecting
-    case uploading
-    case processing
+    case uploadingOriginal(progress: Double)
+    case removingBackground(progress: Double) 
+    case analyzingClothing(progress: Double)
+    case savingToDatabase(progress: Double)
     case completed
     case failed(String)
     
     var isLoading: Bool {
         switch self {
-        case .uploading, .processing:
+        case .uploadingOriginal, .removingBackground, .analyzingClothing, .savingToDatabase:
             return true
         default:
             return false
+        }
+    }
+    
+    var progress: Double {
+        switch self {
+        case .uploadingOriginal(let progress):
+            return progress * 0.25  // %0-25
+        case .removingBackground(let progress):
+            return 0.25 + (progress * 0.25)  // %25-50
+        case .analyzingClothing(let progress):
+            return 0.5 + (progress * 0.25)  // %50-75
+        case .savingToDatabase(let progress):
+            return 0.75 + (progress * 0.25)  // %75-100
+        case .completed:
+            return 1.0
+        default:
+            return 0.0
+        }
+    }
+    
+    var progressPercentage: Int {
+        return Int(progress * 100)
+    }
+    
+    var statusMessage: String {
+        switch self {
+        case .uploadingOriginal:
+            return "Veritabanına yükleniyor..."
+        case .removingBackground:
+            return "Arkaplan temizleniyor..."
+        case .analyzingClothing:
+            return "Kıyafet etiketleniyor..."
+        case .savingToDatabase:
+            return "Etiketlenme tamamlandı..."
+        case .completed:
+            return "Tamamlandı!"
+        case .failed(let error):
+            return "Hata: \(error)"
+        default:
+            return ""
         }
     }
 }

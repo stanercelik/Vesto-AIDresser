@@ -6,7 +6,8 @@ protocol WardrobeServiceProtocol {
     func uploadClothingItem(
         imageData: Data,
         userId: UUID,
-        options: ImageUploadOptions
+        options: ImageUploadOptions,
+        progressCallback: @escaping (UploadState) -> Void
     ) async throws -> ClothingItem
     
     func getUserClothingItems(userId: UUID) async throws -> [ClothingItem]
@@ -52,7 +53,8 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
     func uploadClothingItem(
         imageData: Data,
         userId: UUID,
-        options: ImageUploadOptions
+        options: ImageUploadOptions,
+        progressCallback: @escaping (UploadState) -> Void
     ) async throws -> ClothingItem {
         
         // Validate that user has a valid session
@@ -72,6 +74,9 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
         let fileNameSuffix = "\(UUID().uuidString)_\(timestamp)"
         
         if options.shouldRemoveBackground {
+            // Stage 1: Upload original image (0-25%)
+            await MainActor.run { progressCallback(.uploadingOriginal(progress: 0.0)) }
+            
             let originalFileName = "original_\(fileNameSuffix).jpg"
             
             guard let tempURL = saveImageDataToTemporaryFile(imageData, fileName: originalFileName) else {
@@ -82,6 +87,8 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
                 try? FileManager.default.removeItem(at: tempURL)
             }
             
+            await MainActor.run { progressCallback(.uploadingOriginal(progress: 0.5)) }
+            
             originalImageUrlString = try await uploadImageToS3(
                 data: imageData,
                 userId: userId,
@@ -89,11 +96,18 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
                 contentType: mimeType(for: imageData)
             )
             
+            await MainActor.run { progressCallback(.uploadingOriginal(progress: 1.0)) }
+            
             guard let originalImageUrl = URL(string: originalImageUrlString!) else {
                 throw APIError.invalidResponse
             }
             
+            // Stage 2: Remove background (25-50%)
+            await MainActor.run { progressCallback(.removingBackground(progress: 0.0)) }
+            
             processedImageData = try await backgroundRemovalService.removeBackground(from: originalImageUrl)
+            
+            await MainActor.run { progressCallback(.removingBackground(progress: 1.0)) }
         }
         
         let finalFileName = "processed_\(fileNameSuffix).png"
@@ -113,16 +127,26 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
             contentType: mimeType(for: processedImageData)
         )
         
-        // Analyze clothing with AI
+        // Stage 3: Analyze clothing with AI (50-75%)
+        await MainActor.run { progressCallback(.analyzingClothing(progress: 0.0)) }
+        
         var analysisResult: ClothingAnalysisResult?
         do {
             guard let image = UIImage(data: processedImageData) else {
                 throw APIError.uploadFailed("Could not create image from processed data")
             }
+            
+            await MainActor.run { progressCallback(.analyzingClothing(progress: 0.5)) }
+            
             analysisResult = try await clothingAnalysisService.analyzeClothing(image: image)
+            
+            await MainActor.run { progressCallback(.analyzingClothing(progress: 1.0)) }
         } catch {
             print("Warning: AI analysis failed, saving without analysis: \(error)")
         }
+        
+        // Stage 4: Save to database (75-100%)
+        await MainActor.run { progressCallback(.savingToDatabase(progress: 0.0)) }
         
         let clothingItem = ClothingItem(
             userId: userId,
@@ -139,7 +163,13 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
             texture: analysisResult?.texture
         )
         
-        return try await saveClothingItemToDatabase(clothingItem)
+        await MainActor.run { progressCallback(.savingToDatabase(progress: 0.5)) }
+        
+        let savedItem = try await saveClothingItemToDatabase(clothingItem)
+        
+        await MainActor.run { progressCallback(.savingToDatabase(progress: 1.0)) }
+        
+        return savedItem
     }
     
     func getUserClothingItems(userId: UUID) async throws -> [ClothingItem] {

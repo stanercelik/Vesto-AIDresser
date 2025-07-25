@@ -21,6 +21,7 @@ final class WardrobeViewModel: ObservableObject {
     @Published var selectedImage: UIImage?
     @Published var isSelectionMode = false
     @Published var selectedItems: Set<UUID> = []
+    @Published var selectedItemForNavigation: UUID? = nil
     
     private let wardrobeService: WardrobeServiceProtocol
     private let userId: UUID
@@ -73,6 +74,7 @@ final class WardrobeViewModel: ObservableObject {
         
         // Start with very low compression quality
         guard var imageData = resizedImage.jpegData(compressionQuality: 0.2) else {
+            uploadState = .failed("Görüntü verisi hazırlanamadı")
             errorMessage = "Görüntü verisi hazırlanamadı"
             return
         }
@@ -108,6 +110,7 @@ final class WardrobeViewModel: ObservableObject {
             }
             
             if imageData.count > maxSizeInBytes {
+                uploadState = .failed("Görüntü çok büyük")
                 errorMessage = "Görüntü çok büyük. Lütfen daha basit bir görüntü seçin."
                 return
             }
@@ -116,13 +119,15 @@ final class WardrobeViewModel: ObservableObject {
         let finalImageData = imageData
         
         print("Debug - Image data size: \(finalImageData.count / 1024) KB")
-        uploadState = .uploading
         
         do {
             let uploadedItem = try await wardrobeService.uploadClothingItem(
                 imageData: finalImageData,
                 userId: userId,
-                options: options
+                options: options,
+                progressCallback: { [weak self] state in
+                    self?.uploadState = state
+                }
             )
             
             clothingItems.insert(uploadedItem, at: 0)
@@ -162,6 +167,10 @@ final class WardrobeViewModel: ObservableObject {
         } else {
             selectedItems.insert(itemId)
         }
+    }
+    
+    func navigateToDetail(itemId: UUID) {
+        selectedItemForNavigation = itemId
     }
     
     func deleteSelectedItems() async {

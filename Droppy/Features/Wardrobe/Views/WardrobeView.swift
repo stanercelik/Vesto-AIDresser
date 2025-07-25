@@ -174,24 +174,35 @@ struct WardrobeView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.clothingItems) { item in
-                    ClothingItemCard(
-                        item: item,
-                        isSelectionMode: viewModel.isSelectionMode,
-                        isSelected: viewModel.selectedItems.contains(item.id),
-                        onSingleDelete: {
-                            Task {
-                                await viewModel.deleteClothingItem(item)
-                            }
-                        },
-                        onSelectionToggle: {
-                            viewModel.toggleItemSelection(item.id)
-                        },
-                        onLongPress: {
-                            if !viewModel.isSelectionMode {
-                                viewModel.toggleSelectionMode()
+                    NavigationLink(destination: ClothingDetailView(item: item)) {
+                        ClothingItemCard(
+                            item: item,
+                            isSelectionMode: viewModel.isSelectionMode,
+                            isSelected: viewModel.selectedItems.contains(item.id),
+                            onSingleDelete: {
+                                Task {
+                                    await viewModel.deleteClothingItem(item)
+                                }
+                            },
+                            onSelectionToggle: {
                                 viewModel.toggleItemSelection(item.id)
+                            },
+                            onLongPress: {
+                                if !viewModel.isSelectionMode {
+                                    viewModel.toggleSelectionMode()
+                                    viewModel.toggleItemSelection(item.id)
+                                }
                             }
-                        }
+                        )
+                    }
+                    .disabled(viewModel.isSelectionMode)
+                    .simultaneousGesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                if viewModel.isSelectionMode {
+                                    viewModel.toggleItemSelection(item.id)
+                                }
+                            }
                     )
                 }
             }
@@ -217,32 +228,73 @@ struct WardrobeView: View {
         Color.black.opacity(0.3)
             .ignoresSafeArea()
         
-        VStack(spacing: 16) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: DesignSystem.Colors.accent))
-                .scaleEffect(1.2)
+        VStack(spacing: 20) {
+            // Circular progress indicator
+            ZStack {
+                Circle()
+                    .stroke(DesignSystem.Colors.accent.opacity(0.3), lineWidth: 6)
+                    .frame(width: 80, height: 80)
+                
+                Circle()
+                    .trim(from: 0, to: viewModel.uploadState.progress)
+                    .stroke(
+                        DesignSystem.Colors.accent,
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    )
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut(duration: 0.5), value: viewModel.uploadState.progress)
+                
+                Text("\(viewModel.uploadState.progressPercentage)%")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(DesignSystem.Colors.accent)
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.uploadState.progressPercentage)
+            }
             
-            Text(loadingText)
-                .font(.body)
-                .foregroundColor(DesignSystem.Colors.primaryText)
+            // Progress bar
+            VStack(spacing: 8) {
+                HStack {
+                    Text(viewModel.uploadState.statusMessage)
+                        .font(.body)
+                        .foregroundColor(DesignSystem.Colors.primaryText)
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.uploadState.statusMessage)
+                    
+                    Spacer()
+                    
+                    Text("\(viewModel.uploadState.progressPercentage)%")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.Colors.secondaryText)
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.uploadState.progressPercentage)
+                }
+                
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(DesignSystem.Colors.accent.opacity(0.2))
+                            .frame(height: 8)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(DesignSystem.Colors.accent)
+                            .frame(
+                                width: geometry.size.width * viewModel.uploadState.progress,
+                                height: 8
+                            )
+                            .animation(.easeInOut(duration: 0.5), value: viewModel.uploadState.progress)
+                    }
+                }
+                .frame(height: 8)
+            }
         }
         .padding(32)
         .background(
             RoundedRectangle(cornerRadius: DesignSystem.Metrics.cornerRadius)
                 .fill(DesignSystem.Colors.cardBackground)
+                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
         )
+        .padding(.horizontal, 40)
     }
     
-    private var loadingText: String {
-        switch viewModel.uploadState {
-        case .uploading:
-            return L10n.uploading
-        case .processing:
-            return L10n.processing
-        default:
-            return L10n.uploading
-        }
-    }
 }
 
 struct ClothingItemCard: View {
@@ -339,11 +391,6 @@ struct ClothingItemCard: View {
             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
             .scaleEffect(isSelected ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-        .onTapGesture {
-            if isSelectionMode {
-                onSelectionToggle()
-            }
         }
         .onLongPressGesture {
             onLongPress()
