@@ -57,6 +57,14 @@ extension AppConfiguration {
             fatalError("Replicate API Token not found in Info.plist. Error: \(error)")
         }
     }
+    
+    static var GeminiAPIKey: String {
+        do {
+            return try value(for: "GeminiApiKey")
+        } catch {
+            fatalError("Gemini API Key not found in Info.plist. Error: \(error)")
+        }
+    }
 }
 
 // MARK: - S3 Configuration

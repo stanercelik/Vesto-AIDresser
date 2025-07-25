@@ -17,6 +17,7 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
     private let client: SupabaseClient
     private let backgroundRemovalService: BackgroundRemovalServiceProtocol
     private let s3Service: S3ServiceProtocol
+    private let clothingAnalysisService: ClothingAnalysisServiceProtocol
     
     private enum APIError: LocalizedError {
         case uploadFailed(String)
@@ -39,11 +40,13 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
     init(
         client: SupabaseClient = SupabaseConfig.shared.client,
         backgroundRemovalService: BackgroundRemovalServiceProtocol = ReplicateBackgroundRemovalService(),
-        s3Service: S3ServiceProtocol = SupabaseS3Service()
+        s3Service: S3ServiceProtocol = SupabaseS3Service(),
+        clothingAnalysisService: ClothingAnalysisServiceProtocol = ClothingAnalysisService()
     ) {
         self.client = client
         self.backgroundRemovalService = backgroundRemovalService
         self.s3Service = s3Service
+        self.clothingAnalysisService = clothingAnalysisService
     }
     
     func uploadClothingItem(
@@ -65,7 +68,8 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
         var processedImageData: Data = imageData
         var originalImageUrlString: String?
         
-        let fileNameSuffix = UUID().uuidString
+        let timestamp = Int(Date().timeIntervalSince1970 * 1000) // milliseconds
+        let fileNameSuffix = "\(UUID().uuidString)_\(timestamp)"
         
         if options.shouldRemoveBackground {
             let originalFileName = "original_\(fileNameSuffix).jpg"
@@ -109,11 +113,30 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
             contentType: mimeType(for: processedImageData)
         )
         
+        // Analyze clothing with AI
+        var analysisResult: ClothingAnalysisResult?
+        do {
+            guard let image = UIImage(data: processedImageData) else {
+                throw APIError.uploadFailed("Could not create image from processed data")
+            }
+            analysisResult = try await clothingAnalysisService.analyzeClothing(image: image)
+        } catch {
+            print("Warning: AI analysis failed, saving without analysis: \(error)")
+        }
+        
         let clothingItem = ClothingItem(
             userId: userId,
             imageUrl: finalImageUrl,
             originalImageUrl: originalImageUrlString,
-            category: options.category?.rawValue
+            description: analysisResult?.description,
+            category: analysisResult?.category ?? options.category,
+            color: analysisResult?.mainColor,
+            secondaryColors: analysisResult?.secondaryColors,
+            style: analysisResult?.style,
+            occasionTypes: analysisResult?.occasionTypes,
+            weatherSuitability: analysisResult?.weatherSuitability,
+            fabricType: analysisResult?.fabricType,
+            texture: analysisResult?.texture
         )
         
         return try await saveClothingItemToDatabase(clothingItem)

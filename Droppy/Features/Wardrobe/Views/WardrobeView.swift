@@ -324,7 +324,7 @@ struct ClothingItemCard: View {
                 
                 // Category section
                 HStack {
-                    Text(item.category ?? "Kategori yok")
+                    Text(item.category?.localizedName ?? "Kategori yok")
                         .font(.caption)
                         .foregroundColor(DesignSystem.Colors.secondaryText)
                     

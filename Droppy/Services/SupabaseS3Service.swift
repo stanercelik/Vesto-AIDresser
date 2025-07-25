@@ -41,8 +41,20 @@ final class SupabaseS3Service: S3ServiceProtocol {
         contentType: String
     ) async throws -> String {
         
+        return try await uploadFileWithRetry(data: data, key: key, contentType: contentType, attempt: 1)
+    }
+    
+    private func uploadFileWithRetry(
+        data: Data,
+        key: String,
+        contentType: String,
+        attempt: Int
+    ) async throws -> String {
+        
+        let finalKey = attempt > 1 ? "\(key)_retry\(attempt)" : key
+        
         // Use Supabase S3 endpoint
-        guard let url = URL(string: "\(config.s3Endpoint)/\(config.s3Bucket)/\(key)") else {
+        guard let url = URL(string: "\(config.s3Endpoint)/\(config.s3Bucket)/\(finalKey)") else {
             throw S3Error.invalidResponse
         }
         
@@ -103,16 +115,35 @@ final class SupabaseS3Service: S3ServiceProtocol {
             
             guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
                 let errorMessage = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                
+                // Check for duplicate/conflict errors and retry
+                if (httpResponse.statusCode == 409 || errorMessage.contains("already exists") || errorMessage.contains("duplicate")) && attempt < 3 {
+                    print("Debug - File conflict detected, retrying with attempt \(attempt + 1)")
+                    return try await uploadFileWithRetry(data: data, key: key, contentType: contentType, attempt: attempt + 1)
+                }
+                
                 throw S3Error.uploadFailed("HTTP \(httpResponse.statusCode): \(errorMessage)")
             }
             
-            // Return the public URL
-            let publicURL = "https://knbnmcrkyjcbihqdabld.supabase.co/storage/v1/object/public/\(config.s3Bucket)/\(key)"
+            // Return the public URL - use the final key that was actually uploaded
+            let publicURL = "https://knbnmcrkyjcbihqdabld.supabase.co/storage/v1/object/public/\(config.s3Bucket)/\(finalKey)"
             return publicURL
             
         } catch let error as S3Error {
             throw error
         } catch {
+            let nsError = error as NSError
+            
+            // Handle specific network errors that might indicate conflicts
+            if nsError.code == 40 || nsError.localizedDescription.contains("Message too long") {
+                if attempt < 3 {
+                    print("Debug - Network conflict detected, retrying with attempt \(attempt + 1)")
+                    // Add a small delay before retry
+                    try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    return try await uploadFileWithRetry(data: data, key: key, contentType: contentType, attempt: attempt + 1)
+                }
+            }
+            
             throw S3Error.networkError(error)
         }
     }
