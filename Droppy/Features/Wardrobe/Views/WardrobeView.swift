@@ -55,8 +55,36 @@ struct WardrobeView: View {
             .navigationTitle(L10n.title)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if viewModel.isSelectionMode {
+                        HStack {
+                            Button("İptal") {
+                                viewModel.toggleSelectionMode()
+                            }
+                            .foregroundColor(DesignSystem.Colors.accent)
+                            
+                            if !viewModel.selectedItems.isEmpty {
+                                Button {
+                                    Task {
+                                        await viewModel.deleteSelectedItems()
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    addButton
+                    if viewModel.isSelectionMode {
+                        Text("\(viewModel.selectedItems.count) seçili")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.secondaryText)
+                    } else {
+                        addButton
+                    }
                 }
             }
             .onAppear {
@@ -146,11 +174,25 @@ struct WardrobeView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.clothingItems) { item in
-                    ClothingItemCard(item: item) {
-                        Task {
-                            await viewModel.deleteClothingItem(item)
+                    ClothingItemCard(
+                        item: item,
+                        isSelectionMode: viewModel.isSelectionMode,
+                        isSelected: viewModel.selectedItems.contains(item.id),
+                        onSingleDelete: {
+                            Task {
+                                await viewModel.deleteClothingItem(item)
+                            }
+                        },
+                        onSelectionToggle: {
+                            viewModel.toggleItemSelection(item.id)
+                        },
+                        onLongPress: {
+                            if !viewModel.isSelectionMode {
+                                viewModel.toggleSelectionMode()
+                                viewModel.toggleItemSelection(item.id)
+                            }
                         }
-                    }
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -205,7 +247,11 @@ struct WardrobeView: View {
 
 struct ClothingItemCard: View {
     let item: ClothingItem
-    let onDelete: () -> Void
+    let isSelectionMode: Bool
+    let isSelected: Bool
+    let onSingleDelete: () -> Void
+    let onSelectionToggle: () -> Void
+    let onLongPress: () -> Void
     
     @State private var showingDeleteAlert = false
     
@@ -216,51 +262,96 @@ struct ClothingItemCard: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            AsyncImage(url: URL(string: item.imageUrl)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle()
-                    .fill(DesignSystem.Colors.accent.opacity(0.1))
-                    .overlay(
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: DesignSystem.Colors.accent))
-                    )
-            }
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Metrics.cornerRadius))
-            .clipped()
-            
-            if let category = item.category {
+        ZStack {
+            VStack(spacing: 0) {
+                ZStack {
+                    AsyncImage(url: URL(string: item.imageUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(DesignSystem.Colors.accent.opacity(0.1))
+                            .overlay(
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: DesignSystem.Colors.accent))
+                            )
+                    }
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Metrics.cornerRadius))
+                    .clipped()
+                    
+                    // Single delete button (top-right corner)
+                    if !isSelectionMode {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Button(action: {
+                                    showingDeleteAlert = true
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.white)
+                                        .background(Color.red.opacity(0.8))
+                                        .clipShape(Circle())
+                                }
+                                .padding(8)
+                            }
+                            Spacer()
+                        }
+                    }
+                    
+                    // Selection overlay
+                    if isSelectionMode {
+                        Rectangle()
+                            .fill(Color.black.opacity(isSelected ? 0.3 : 0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Metrics.cornerRadius))
+                        
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .font(.title2)
+                                    .foregroundColor(isSelected ? DesignSystem.Colors.accent : .white)
+                                    .background(Color.white.opacity(isSelected ? 0 : 0.3))
+                                    .clipShape(Circle())
+                                    .padding(8)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+                
+                // Category section
                 HStack {
-                    Text(category)
+                    Text(item.category ?? "Kategori yok")
                         .font(.caption)
                         .foregroundColor(DesignSystem.Colors.secondaryText)
                     
                     Spacer()
-                    
-                    Button(action: {
-                        showingDeleteAlert = true
-                    }) {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                            .foregroundColor(.red.opacity(0.8))
-                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(DesignSystem.Colors.cardBackground)
             }
+            .background(DesignSystem.Colors.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Metrics.cornerRadius))
+            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            .scaleEffect(isSelected ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
-        .background(DesignSystem.Colors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Metrics.cornerRadius))
-        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .onTapGesture {
+            if isSelectionMode {
+                onSelectionToggle()
+            }
+        }
+        .onLongPressGesture {
+            onLongPress()
+        }
         .alert(L10n.deleteConfirmation, isPresented: $showingDeleteAlert) {
             Button(L10n.cancel, role: .cancel) { }
             Button(L10n.delete, role: .destructive) {
-                onDelete()
+                onSingleDelete()
             }
         }
     }

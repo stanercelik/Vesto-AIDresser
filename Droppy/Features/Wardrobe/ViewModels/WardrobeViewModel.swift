@@ -19,6 +19,8 @@ final class WardrobeViewModel: ObservableObject {
     @Published var showingCamera = false
     @Published var showingActionSheet = false
     @Published var selectedImage: UIImage?
+    @Published var isSelectionMode = false
+    @Published var selectedItems: Set<UUID> = []
     
     private let wardrobeService: WardrobeServiceProtocol
     private let userId: UUID
@@ -145,6 +147,40 @@ final class WardrobeViewModel: ObservableObject {
             errorMessage = L10n.deleteError
             print("Error deleting clothing item: \(error.localizedDescription)")
         }
+    }
+    
+    func toggleSelectionMode() {
+        isSelectionMode.toggle()
+        if !isSelectionMode {
+            selectedItems.removeAll()
+        }
+    }
+    
+    func toggleItemSelection(_ itemId: UUID) {
+        if selectedItems.contains(itemId) {
+            selectedItems.remove(itemId)
+        } else {
+            selectedItems.insert(itemId)
+        }
+    }
+    
+    func deleteSelectedItems() async {
+        let itemsToDelete = clothingItems.filter { selectedItems.contains($0.id) }
+        
+        for item in itemsToDelete {
+            do {
+                try await wardrobeService.deleteClothingItem(itemId: item.id, userId: userId)
+                clothingItems.removeAll { $0.id == item.id }
+            } catch {
+                errorMessage = L10n.deleteError
+                print("Error deleting clothing item: \(error.localizedDescription)")
+                return
+            }
+        }
+        
+        selectedItems.removeAll()
+        isSelectionMode = false
+        await showSuccessFeedback()
     }
     
     func dismissError() {

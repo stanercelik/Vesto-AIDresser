@@ -14,6 +14,8 @@ protocol S3ServiceProtocol {
         key: String,
         contentType: String
     ) async throws -> String
+    
+    func deleteFile(key: String) async throws
 }
 
 final class SupabaseS3Service: S3ServiceProtocol {
@@ -193,5 +195,60 @@ final class SupabaseS3Service: S3ServiceProtocol {
         let symmetricKey = SymmetricKey(data: key)
         let authenticationCode = HMAC<SHA256>.authenticationCode(for: data, using: symmetricKey)
         return Data(authenticationCode)
+    }
+    
+    func deleteFile(key: String) async throws {
+        guard let url = URL(string: "\(config.s3Endpoint)/\(config.s3Bucket)/\(key)") else {
+            throw S3Error.invalidResponse
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        // Add AWS S3 signature v4 authentication for DELETE
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        dateFormatter.timeZone = TimeZone(abbreviation: "UTC")
+        let amzDate = dateFormatter.string(from: Date())
+        
+        let dateStamp = String(amzDate.prefix(8))
+        let emptyPayload = Data()
+        let payloadHash = SHA256.hash(data: emptyPayload).compactMap { String(format: "%02x", $0) }.joined()
+        
+        request.setValue(amzDate, forHTTPHeaderField: "x-amz-date")
+        request.setValue(payloadHash, forHTTPHeaderField: "x-amz-content-sha256")
+        
+        let authorization = createAuthorizationHeader(
+            method: "DELETE",
+            url: url,
+            headers: [
+                "host": url.host!,
+                "x-amz-date": amzDate,
+                "x-amz-content-sha256": payloadHash
+            ],
+            payload: emptyPayload,
+            dateStamp: dateStamp,
+            amzDate: amzDate
+        )
+        
+        request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (responseData, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw S3Error.invalidResponse
+            }
+            
+            guard httpResponse.statusCode == 204 || httpResponse.statusCode == 200 else {
+                let errorMessage = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                throw S3Error.uploadFailed("HTTP \(httpResponse.statusCode): \(errorMessage)")
+            }
+            
+        } catch let error as S3Error {
+            throw error
+        } catch {
+            throw S3Error.networkError(error)
+        }
     }
 }

@@ -135,6 +135,26 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
     }
     
     func deleteClothingItem(itemId: UUID, userId: UUID) async throws {
+        // First, get the item to find the image URLs
+        let item: ClothingItem
+        do {
+            let response: [ClothingItem] = try await client
+                .from("clothing_items")
+                .select()
+                .eq("id", value: itemId)
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            guard let clothingItem = response.first else {
+                throw APIError.invalidResponse
+            }
+            item = clothingItem
+        } catch {
+            throw APIError.networkError(error)
+        }
+        
+        // Delete from database first
         do {
             try await client
                 .from("clothing_items")
@@ -145,9 +165,39 @@ final class SupabaseWardrobeService: WardrobeServiceProtocol {
         } catch {
             throw APIError.networkError(error)
         }
+        
+        // Delete images from storage
+        do {
+            // Delete processed image
+            if let processedKey = extractS3KeyFromUrl(item.imageUrl, userId: userId) {
+                try await s3Service.deleteFile(key: processedKey)
+            }
+            
+            // Delete original image if exists
+            if let originalImageUrl = item.originalImageUrl,
+               let originalKey = extractS3KeyFromUrl(originalImageUrl, userId: userId) {
+                try await s3Service.deleteFile(key: originalKey)
+            }
+        } catch {
+            // Log the error but don't fail the entire operation
+            // The database record is already deleted
+            print("Warning: Failed to delete images from storage: \(error)")
+        }
     }
     
     // MARK: - Private Methods
+    
+    private func extractS3KeyFromUrl(_ urlString: String, userId: UUID) -> String? {
+        // URL format: https://knbnmcrkyjcbihqdabld.supabase.co/storage/v1/object/public/clothing-images/userId/filename
+        let prefix = "https://knbnmcrkyjcbihqdabld.supabase.co/storage/v1/object/public/clothing-images/"
+        
+        guard urlString.hasPrefix(prefix) else {
+            return nil
+        }
+        
+        let keyPart = String(urlString.dropFirst(prefix.count))
+        return keyPart
+    }
     
     private func mimeType(for data: Data) -> String {
         var b: UInt8 = 0
